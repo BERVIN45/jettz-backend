@@ -1,14 +1,25 @@
-# Use Java 17
-FROM openjdk:17-jdk-slim
+# Stage 1: Build the project
+FROM maven:3.9.3-eclipse-temurin-17 AS build
 
-# Set working directory
 WORKDIR /app
 
-# Copy the jar
-COPY target/jettz-0.0.1-SNAPSHOT.jar app.jar
+# Copy pom.xml and source code
+COPY pom.xml .
+COPY src ./src
 
-# Expose port (Render will provide $PORT)
+# Build the JAR without running tests
+RUN mvn clean package -DskipTests
+
+# Stage 2: Run the JAR
+FROM eclipse-temurin:17-jdk:slim
+
+WORKDIR /app
+
+# Copy the JAR from the build stage
+COPY --from=build /app/target/jettz-0.0.1-SNAPSHOT.jar app.jar
+
+# Expose the port
 ENV PORT 8080
 
 # Run the Spring Boot app
-ENTRYPOINT ["java","-jar","/app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]
